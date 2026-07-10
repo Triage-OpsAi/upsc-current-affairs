@@ -18,35 +18,44 @@ export default function PracticePage({ params }: { params: { topicId: string } }
   const [slides, setSlides] = useState<BreakdownSlide[]>([]);
   const [slideIndex, setSlideIndex] = useState(0);
   const [errorMsg, setErrorMsg] = useState("");
+  const [actionError, setActionError] = useState("");
+  const [actionBusy, setActionBusy] = useState(false);
+
+  async function loadPractice() {
+    try {
+      setStage("loading");
+      setSelected(null);
+      setResult(null);
+      setNextTopic(null);
+      setSlides([]);
+      setSlideIndex(0);
+      setErrorMsg("");
+      setActionError("");
+      const sid = await ensureStudentId();
+      setStudentId(sid);
+      const [fetched, next] = await Promise.all([
+        api.getQuestionForTopic(params.topicId),
+        api.getNextTopic(params.topicId).catch(() => ({ topic: null })),
+      ]);
+      setQuestion(fetched);
+      setNextTopic(next.topic);
+      setStage("question");
+    } catch (error: any) {
+      setErrorMsg(error.message || "Something went wrong");
+      setStage("error");
+    }
+  }
 
   useEffect(() => {
-    (async () => {
-      try {
-        setStage("loading");
-        setSelected(null);
-        setResult(null);
-        setNextTopic(null);
-        setSlides([]);
-        setSlideIndex(0);
-        setErrorMsg("");
-        const sid = await ensureStudentId();
-        setStudentId(sid);
-        const [fetched, next] = await Promise.all([
-          api.getQuestionForTopic(params.topicId),
-          api.getNextTopic(params.topicId).catch(() => ({ topic: null })),
-        ]);
-        setQuestion(fetched);
-        setNextTopic(next.topic);
-        setStage("question");
-      } catch (error: any) {
-        setErrorMsg(error.message || "Something went wrong");
-        setStage("error");
-      }
-    })();
+    void loadPractice();
+    // The route id is the complete identity of this practice screen.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.topicId]);
 
   async function submit(attemptNumber: number, wentThroughBreakdown: boolean) {
     if (!question || !selected || !studentId) return;
+    setActionBusy(true);
+    setActionError("");
     try {
       const response = await api.submitAttempt({
         student_id: studentId,
@@ -58,21 +67,25 @@ export default function PracticePage({ params }: { params: { topicId: string } }
       setResult(response);
       setStage(response.is_correct ? "answered-correct" : "answered-wrong");
     } catch (error: any) {
-      setErrorMsg(error.message || "Could not submit your answer.");
-      setStage("error");
+      setActionError(error.message || "Could not submit your answer. Tap submit to try again.");
+    } finally {
+      setActionBusy(false);
     }
   }
 
   async function startBreakdown() {
     if (!question) return;
+    setActionBusy(true);
+    setActionError("");
     try {
       const fetched = await api.getBreakdown(question.id);
       setSlides(fetched);
       setSlideIndex(0);
       setStage("breakdown");
     } catch (error: any) {
-      setErrorMsg(error.message || "Could not load the breakdown.");
-      setStage("error");
+      setActionError(error.message || "Could not load the breakdown. Please try again.");
+    } finally {
+      setActionBusy(false);
     }
   }
 
@@ -83,7 +96,19 @@ export default function PracticePage({ params }: { params: { topicId: string } }
   }
 
   if (stage === "loading") return <ShellMessage>Loading question from database...</ShellMessage>;
-  if (stage === "error") return <ShellMessage>Could not load this question: {errorMsg}</ShellMessage>;
+  if (stage === "error") {
+    return (
+      <ShellMessage>
+        <p>Could not load this question: {errorMsg}</p>
+        <div className="mt-4 flex flex-wrap gap-3">
+          <button onClick={() => void loadPractice()} className="rounded-[6px] bg-[#18181b] px-4 py-2 text-white">
+            Try again
+          </button>
+          <Link href="/archive" className="rounded-[6px] border border-[#d4d4d8] px-4 py-2">Back to archive</Link>
+        </div>
+      </ShellMessage>
+    );
+  }
   if (!question) return null;
 
   return (
@@ -106,8 +131,15 @@ export default function PracticePage({ params }: { params: { topicId: string } }
               selected={selected}
               setSelected={setSelected}
               disabled={stage === "answered-correct" || stage === "answered-wrong"}
+              busy={actionBusy}
               onSubmit={() => submit(stage === "retry" ? 2 : 1, stage === "retry")}
             />
+
+            {actionError && (
+              <div className="mt-4 rounded-[8px] border border-[#fca5a5] bg-[#fef2f2] p-4 text-sm font-semibold text-[#991b1b]">
+                {actionError}
+              </div>
+            )}
 
             {stage === "answered-correct" && (
               <ResultBanner ok>
@@ -137,8 +169,8 @@ export default function PracticePage({ params }: { params: { topicId: string } }
                     {result?.correct_option && ` Correct answer: ${result.correct_option}. ${result.explanation ?? ""}`}
                   </span>
                   {result?.breakdown_available && !result.correct_option && (
-                    <button onClick={startBreakdown} className="rounded-[6px] bg-[#18181b] px-4 py-2 text-sm font-bold text-white">
-                      Work through breakdown
+                    <button disabled={actionBusy} onClick={startBreakdown} className="rounded-[6px] bg-[#18181b] px-4 py-2 text-sm font-bold text-white disabled:opacity-50">
+                      {actionBusy ? "Loading breakdown..." : "Work through breakdown"}
                     </button>
                   )}
                 </div>
@@ -170,12 +202,14 @@ function QuestionCard({
   selected,
   setSelected,
   disabled,
+  busy,
   onSubmit,
 }: {
   question: Question;
   selected: string | null;
   setSelected: (key: string) => void;
   disabled: boolean;
+  busy: boolean;
   onSubmit: () => void;
 }) {
   return (
@@ -201,11 +235,11 @@ function QuestionCard({
       </div>
       {!disabled && (
         <button
-          disabled={!selected}
+          disabled={!selected || busy}
           onClick={onSubmit}
           className="mt-6 rounded-[6px] bg-[#18181b] px-5 py-3 text-sm font-bold text-white disabled:opacity-40"
         >
-          Submit Answer
+          {busy ? "Submitting..." : "Submit Answer"}
         </button>
       )}
     </section>
@@ -228,23 +262,27 @@ function BreakdownDeck({
   const slide = slides[index];
   const [chosen, setChosen] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ is_correct: boolean; correct_option: string; explanation: string | null } | null>(null);
+  const [submitError, setSubmitError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     setChosen(null);
     setFeedback(null);
+    setSubmitError("");
+    setSubmitting(false);
   }, [index]);
 
   async function submitPractice() {
     if (!chosen) return;
+    setSubmitting(true);
+    setSubmitError("");
     try {
       const response = await api.submitBreakdownAnswer({ student_id: studentId, slide_id: slide.id, selected_option: chosen });
       setFeedback(response);
-    } catch {
-      setFeedback({
-        is_correct: false,
-        correct_option: "",
-        explanation: "Could not submit this answer. Please try again.",
-      });
+    } catch (error: any) {
+      setSubmitError(error.message || "Could not submit this answer. Please try again.");
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -287,7 +325,7 @@ function BreakdownDeck({
               {slide.practice_options?.map((option) => (
                 <button
                   key={option.key}
-                  disabled={!!feedback}
+                  disabled={!!feedback || submitting}
                   onClick={() => setChosen(option.key)}
                   className={`w-full rounded-[8px] border p-4 text-left text-sm font-semibold ${
                     chosen === option.key ? "border-[#18181b] bg-[#18181b] text-white" : "border-[#e4e4e7] bg-white"
@@ -300,12 +338,17 @@ function BreakdownDeck({
             </div>
             {!feedback && (
               <button
-                disabled={!chosen}
+                disabled={!chosen || submitting}
                 onClick={submitPractice}
                 className="mt-5 rounded-[6px] bg-[#18181b] px-5 py-3 text-sm font-bold text-white disabled:opacity-40"
               >
-                Check Answer
+                {submitting ? "Checking..." : "Check Answer"}
               </button>
+            )}
+            {submitError && (
+              <div className="mt-4 rounded-[8px] border border-[#fca5a5] bg-[#fef2f2] p-4 text-sm font-semibold text-[#991b1b]">
+                {submitError}
+              </div>
             )}
             {feedback && (
               <ResultBanner ok={feedback.is_correct}>

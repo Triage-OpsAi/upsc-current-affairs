@@ -95,11 +95,19 @@ export default function ProfilePage() {
             </div>
             <h2 className="mt-4 text-xl font-black">{student?.name || "Aspirant"}</h2>
             <p className="mt-1 text-sm text-[#6b7280]">{student?.email}</p>
+            {student?.device_warning && (
+              <div className="mt-4 rounded-[8px] border border-[#f59e0b] bg-[#fffbeb] p-3 text-xs font-semibold leading-5 text-[#92400e]">
+                {student.device_warning}
+              </div>
+            )}
             <div className="mt-5 space-y-3 text-sm">
-              <SecurityRow label="Session duration" value="2 hours" />
-              <SecurityRow label="Active devices" value="1 allowed" />
+              <SecurityRow label="Session duration" value="30 days" />
+              <SecurityRow
+                label="Recent devices"
+                value={`${student?.recent_device_count ?? "-"} / ${student?.device_limit ?? 2}`}
+              />
               <SecurityRow label="Email per device" value="1 allowed" />
-              <SecurityRow label="Device switch limit" value="2 devices" />
+              <SecurityRow label="Device limit" value={`${student?.device_limit ?? 2} / 30 days`} />
               <SecurityRow label="Suspension window" value="3 days" />
             </div>
           </aside>

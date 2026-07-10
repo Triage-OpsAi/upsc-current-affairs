@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { MobileNav } from "./components/MobileNav";
-import { api, DashboardStats, Topic, TopicListResponse } from "../lib/api";
+import { api, ApiError, DashboardStats, Topic, TopicListResponse } from "../lib/api";
 import {
   StudentProfile,
   clearAuthSession,
@@ -48,6 +48,7 @@ export default function HomePage() {
   const [authReady, setAuthReady] = useState(false);
   const [selected, setSelected] = useState(months[0] ?? { year: 2026, month: 7 });
   const [topics, setTopics] = useState<TopicListResponse | null>(null);
+  const [practiceTopic, setPracticeTopic] = useState<Topic | null>(null);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadMessage, setLoadMessage] = useState("");
@@ -64,6 +65,7 @@ export default function HomePage() {
         if (active) {
           setStudent(null);
           setStats(null);
+          setPracticeTopic(null);
           setAuthReady(true);
         }
         return;
@@ -72,11 +74,16 @@ export default function HomePage() {
       refreshing = true;
       if (active) setStudent(cached);
       try {
-        const [fresh, dashboard] = await Promise.all([api.me(), api.getDashboard()]);
+        const [fresh, dashboard, practice] = await Promise.all([
+          api.me(),
+          api.getDashboard(),
+          api.getLatestPracticeTopic().catch(() => ({ topic: null })),
+        ]);
         if (!active) return;
         updateStoredStudent(fresh);
         setStudent(fresh);
         setStats(dashboard);
+        setPracticeTopic(practice.topic);
       } catch {
         if (active && !getAuthToken()) {
           setStudent(null);
@@ -118,7 +125,17 @@ export default function HomePage() {
   }, [student, selected]);
 
   if (!authReady) return <FullPageMessage>Loading secure session...</FullPageMessage>;
-  if (!student) return <LoginScreen onAuthed={setStudent} />;
+  if (!student) {
+    return (
+      <LoginScreen
+        onAuthed={(authenticatedStudent) => {
+          setStudent(authenticatedStudent);
+          void api.getDashboard().then(setStats).catch(() => undefined);
+          void api.getLatestPracticeTopic().then(({ topic }) => setPracticeTopic(topic)).catch(() => setPracticeTopic(null));
+        }}
+      />
+    );
+  }
 
   const firstTopic = topics?.items[0] ?? null;
   const totalQuestions = topics ? topics.meta.total_items : null;
@@ -126,11 +143,21 @@ export default function HomePage() {
   return (
     <main className="min-h-screen bg-[#f4f5f7] text-[#18181b] xl:h-screen xl:overflow-hidden">
       <div className="grid min-h-screen grid-cols-1 xl:h-screen xl:grid-cols-[270px_1fr]">
-        <Sidebar student={student} active="home" onLogout={() => { clearAuthSession(); setStudent(null); }} />
+        <Sidebar
+          student={student}
+          active="home"
+          practiceHref={practiceTopic ? `/practice/${practiceTopic.id}` : null}
+          onLogout={() => { clearAuthSession(); setStudent(null); setPracticeTopic(null); }}
+        />
         <section className="scroll-invisible p-3 pb-24 sm:p-4 sm:pb-24 xl:h-screen xl:overflow-y-auto xl:p-5">
           <div className="overflow-hidden rounded-[8px] bg-[#fafafa] shadow-2xl shadow-black/20 ring-1 ring-white/20">
             <Topbar student={student} stats={stats} />
             <div className="space-y-4 p-4 sm:p-5 lg:p-8">
+              {student.device_warning && (
+                <section className="rounded-[8px] border border-[#f59e0b] bg-[#fffbeb] p-4 text-sm font-semibold text-[#92400e]">
+                  {student.device_warning}
+                </section>
+              )}
               <section className="rounded-[8px] border border-[#e4e4e7] bg-white p-5 shadow-sm">
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                   <h2 className="text-sm font-bold text-[#18181b]">Continue Your Practice</h2>
@@ -167,7 +194,7 @@ export default function HomePage() {
           </div>
         </section>
       </div>
-      <MobileNav active="home" />
+      <MobileNav active="home" practiceHref={practiceTopic ? `/practice/${practiceTopic.id}` : null} />
     </main>
   );
 }
@@ -178,21 +205,37 @@ function LoginScreen({ onAuthed }: { onAuthed: (student: StudentProfile) => void
   const [name, setName] = useState("");
   const [targetExam, setTargetExam] = useState("UPSC Prelims");
   const [accountExists, setAccountExists] = useState<boolean | null>(null);
+  const [resendIn, setResendIn] = useState(0);
   const [step, setStep] = useState<"email" | "otp">("email");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
-  async function requestOtp() {
+  useEffect(() => {
+    if (step !== "otp" || resendIn <= 0) return;
+    const timer = window.setInterval(() => {
+      setResendIn((value) => Math.max(0, value - 1));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [step, resendIn]);
+
+  async function requestOtp(isResend = false) {
     setBusy(true);
     setMessage("");
     try {
       const response = await api.requestOtp(email.trim());
       setAccountExists(response.account_exists);
+      setResendIn(response.resend_after_seconds);
       setStep("otp");
-      setMessage(response.account_exists
-        ? "OTP sent. Enter it to sign in."
-        : "OTP sent. Add your profile details once to create the account.");
+      setMessage(isResend
+        ? "A new OTP was sent. The previous code no longer works."
+        : response.account_exists
+          ? "OTP sent. Enter it to sign in."
+          : "OTP sent. Add your profile details once to create the account.");
     } catch (error: any) {
+      if (error instanceof ApiError && error.code === "otp_resend_cooldown") {
+        const retryAfter = Number((error.details as any)?.retry_after_seconds);
+        if (Number.isFinite(retryAfter)) setResendIn(retryAfter);
+      }
       setMessage(error.message || "Could not send OTP");
     } finally {
       setBusy(false);
@@ -302,25 +345,36 @@ function LoginScreen({ onAuthed }: { onAuthed: (student: StudentProfile) => void
             {message && <p className="mt-4 rounded-[6px] bg-[#f4f4f5] px-3 py-2 text-sm text-[#3f3f46]">{message}</p>}
 
             <button
-              onClick={step === "email" ? requestOtp : verify}
+              onClick={step === "email" ? () => requestOtp(false) : verify}
               disabled={busy || !email || (step === "otp" && otp.length < 4)}
               className="mt-6 w-full rounded-[8px] bg-[#18181b] px-5 py-3 text-sm font-bold text-white shadow-lg shadow-[#18181b]/20 disabled:opacity-50"
             >
               {busy ? "Please wait..." : step === "email" ? "Send OTP" : "Verify and Enter"}
             </button>
             {step === "otp" && (
-              <button
-                type="button"
-                onClick={() => {
-                  setStep("email");
-                  setOtp("");
-                  setAccountExists(null);
-                  setMessage("");
-                }}
-                className="mt-3 w-full px-3 py-2 text-xs font-bold text-[#6b7280]"
-              >
-                Use a different email
-              </button>
+              <div className="mt-3 flex items-center justify-between gap-3 text-xs font-bold text-[#6b7280]">
+                <button
+                  type="button"
+                  onClick={() => void requestOtp(true)}
+                  disabled={busy || resendIn > 0}
+                  className="px-3 py-2 disabled:opacity-50"
+                >
+                  {resendIn > 0 ? `Resend OTP in ${resendIn}s` : "Resend OTP"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStep("email");
+                    setOtp("");
+                    setAccountExists(null);
+                    setResendIn(0);
+                    setMessage("");
+                  }}
+                  className="px-3 py-2"
+                >
+                  Use a different email
+                </button>
+              </div>
             )}
           </div>
         </section>
@@ -332,17 +386,23 @@ function LoginScreen({ onAuthed }: { onAuthed: (student: StudentProfile) => void
 function Sidebar({
   student,
   active,
+  practiceHref,
   onLogout,
 }: {
   student: StudentProfile;
   active: string;
+  practiceHref: string | null;
   onLogout: () => void;
 }) {
+  const visibleNavItems = navItems
+    .filter(([key]) => key !== "today" || practiceHref)
+    .map(([key, label, href, path]) => [key, label, key === "today" ? practiceHref! : href, path] as const);
+
   return (
     <aside className="scroll-invisible hidden min-h-screen bg-[#fafafa] p-5 shadow-xl shadow-black/20 xl:block xl:h-screen xl:overflow-y-auto">
       <LogoMark dark />
       <nav className="mt-8 space-y-2">
-        {navItems.map(([key, label, href, path]) => (
+        {visibleNavItems.map(([key, label, href, path]) => (
           <Link
             href={href}
             key={key}

@@ -8,6 +8,9 @@ export interface StudentProfile {
   bio: string | null;
   city: string | null;
   suspended_until: string | null;
+  recent_device_count?: number;
+  device_limit?: number;
+  device_warning?: string | null;
 }
 
 export interface AuthSession {

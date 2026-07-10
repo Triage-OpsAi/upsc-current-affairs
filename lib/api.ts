@@ -8,6 +8,21 @@ import {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly code: string | null = null,
+    public readonly details: unknown = null,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
+const wait = (milliseconds: number) =>
+  new Promise<void>((resolve) => globalThis.setTimeout(resolve, milliseconds));
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = typeof window !== "undefined" ? getAuthToken() : null;
   const deviceId = typeof window !== "undefined" ? getOrCreateDeviceId() : null;
@@ -18,27 +33,59 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   if (token) headers.Authorization = `Bearer ${token}`;
   if (deviceId) headers["X-Device-Id"] = deviceId;
 
-  let res: Response;
-  try {
-    res = await fetch(`${API_BASE}${path}`, {
-      ...options,
-      headers,
-      cache: options.cache ?? "no-store",
-    });
-  } catch {
-    throw new Error("Could not connect to the server. Please start the backend and try again.");
-  }
-  if (!res.ok) {
-    if (res.status === 401) {
-      clearAuthSession();
+  const method = (options.method || "GET").toUpperCase();
+  const maxAttempts = method === "GET" ? 3 : 1;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    let res: Response;
+    try {
+      res = await fetch(`${API_BASE}${path}`, {
+        ...options,
+        headers,
+        cache: options.cache ?? "no-store",
+      });
+    } catch {
+      if (attempt + 1 < maxAttempts) {
+        await wait(250 * (attempt + 1));
+        continue;
+      }
+      throw new ApiError("Could not connect to the server. Please try again.", 0);
     }
-    throw new Error(messageForStatus(res.status));
+
+    if (!res.ok) {
+      if ([500, 502, 503, 504].includes(res.status) && attempt + 1 < maxAttempts) {
+        const retryAfter = Number(res.headers.get("Retry-After"));
+        await wait(Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 250 * (attempt + 1));
+        continue;
+      }
+      if (res.status === 401) clearAuthSession();
+      throw await errorFromResponse(res);
+    }
+
+    try {
+      return await res.json();
+    } catch {
+      throw new ApiError("The server returned unreadable data. Please try again.", res.status);
+    }
   }
+
+  throw new ApiError("The server is temporarily unavailable. Please try again.", 503);
+}
+
+async function errorFromResponse(res: Response): Promise<ApiError> {
+  let detail: any = null;
   try {
-    return await res.json();
+    const body = await res.json();
+    detail = body?.detail ?? null;
   } catch {
-    throw new Error("The server returned unreadable data. Please try again.");
+    // Some infrastructure errors return HTML/plain text. Use the safe status message.
   }
+  const message = typeof detail === "string"
+    ? detail
+    : typeof detail?.message === "string"
+      ? detail.message
+      : messageForStatus(res.status);
+  return new ApiError(message, res.status, typeof detail?.code === "string" ? detail.code : null, detail);
 }
 
 function messageForStatus(status: number): string {
@@ -47,6 +94,7 @@ function messageForStatus(status: number): string {
   if (status === 403) return "This action is not allowed for this account or device.";
   if (status === 404) return "No saved data is available for this screen yet.";
   if (status === 429) return "Too many attempts. Please wait and try again.";
+  if (status === 503) return "The database is busy. Please retry in a moment.";
   if (status >= 500) return "The server had a problem. Please try again.";
   return "Something went wrong. Please try again.";
 }
@@ -59,6 +107,13 @@ export interface Topic {
   summary: string | null;
   subject_tags: string[];
   source_date: string | null;
+  question_text: string | null;
+}
+
+export interface ArchiveMonth {
+  year: number;
+  month: number;
+  question_count: number;
 }
 
 export interface TopicListResponse {
@@ -118,7 +173,7 @@ export interface DashboardStats {
 
 export const api = {
   requestOtp: (email: string) =>
-    request<{ ok: boolean; expires_in_minutes: number; account_exists: boolean; dev_otp: string | null }>(`/api/auth/request-otp`, {
+    request<{ ok: boolean; expires_in_minutes: number; account_exists: boolean; resend_after_seconds: number; dev_otp: string | null }>(`/api/auth/request-otp`, {
       method: "POST",
       body: JSON.stringify({ email, purpose: "login" }),
     }),
@@ -140,6 +195,8 @@ export const api = {
     q.set("page_size", String(params.page_size ?? 10));
     return request<TopicListResponse>(`/api/current-affairs?${q.toString()}`);
   },
+  getAvailableMonths: () => request<ArchiveMonth[]>(`/api/current-affairs/months`),
+  getLatestPracticeTopic: () => request<NextTopicResponse>(`/api/current-affairs/practice/latest`),
   getNextTopic: (topicId: string) => request<NextTopicResponse>(`/api/current-affairs/${topicId}/next`),
   getOrCreateStudent: (device_id: string) =>
     request<{ id: string; device_id: string; name: string | null; target_exam: string }>(`/api/students`, {
