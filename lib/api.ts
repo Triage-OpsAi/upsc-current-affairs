@@ -157,6 +157,18 @@ export interface DailyReport {
   accuracy: number;
   percentile: number;
   subject_breakdown: Record<string, { total: number; correct: number }>;
+  concept_breakdown: Record<string, {
+    topic_id: string;
+    total: number;
+    correct: number;
+    accuracy: number;
+  }>;
+  practice_recommendations: Array<{
+    concept: string;
+    topic_id: string;
+    accuracy: number;
+    reason: string;
+  }>;
   exam_wise_readiness: Record<string, number>;
   ai_feedback: string | null;
 }

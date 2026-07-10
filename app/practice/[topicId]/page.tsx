@@ -3,10 +3,24 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { MobileNav } from "../../components/MobileNav";
+import { AppLoader, InlineSpinner } from "../../components/AppLoader";
 import { api, AttemptResult, BreakdownSlide, Question, Topic } from "../../../lib/api";
 import { ensureStudentId } from "../../../lib/student";
 
 type Stage = "loading" | "question" | "answered-correct" | "answered-wrong" | "breakdown" | "retry" | "error";
+
+const CONFETTI_COLORS = ["#67e8f9", "#34d399", "#fbbf24", "#fb7185", "#a78bfa", "#f4f4f5"];
+const CONFETTI_PARTICLES = Array.from({ length: 32 }, (_, particleIndex) => {
+  const angle = (particleIndex / 32) * Math.PI * 2;
+  const distance = 140 + (particleIndex % 5) * 24;
+  return {
+    x: Math.round(Math.cos(angle) * distance),
+    y: Math.round(Math.sin(angle) * distance),
+    rotation: 180 + (particleIndex % 7) * 67,
+    delay: (particleIndex % 4) * 0.025,
+    color: CONFETTI_COLORS[particleIndex % CONFETTI_COLORS.length],
+  };
+});
 
 export default function PracticePage({ params }: { params: { topicId: string } }) {
   const [studentId, setStudentId] = useState<string | null>(null);
@@ -20,6 +34,11 @@ export default function PracticePage({ params }: { params: { topicId: string } }
   const [errorMsg, setErrorMsg] = useState("");
   const [actionError, setActionError] = useState("");
   const [actionBusy, setActionBusy] = useState(false);
+  const [celebrationKey, setCelebrationKey] = useState(0);
+
+  function celebrateCorrectAnswer() {
+    setCelebrationKey((value) => value + 1);
+  }
 
   async function loadPractice() {
     try {
@@ -65,6 +84,7 @@ export default function PracticePage({ params }: { params: { topicId: string } }
         went_through_breakdown: wentThroughBreakdown,
       });
       setResult(response);
+      if (response.is_correct) celebrateCorrectAnswer();
       setStage(response.is_correct ? "answered-correct" : "answered-wrong");
     } catch (error: any) {
       setActionError(error.message || "Could not submit your answer. Tap submit to try again.");
@@ -95,7 +115,7 @@ export default function PracticePage({ params }: { params: { topicId: string } }
     setStage("retry");
   }
 
-  if (stage === "loading") return <ShellMessage>Loading question from database...</ShellMessage>;
+  if (stage === "loading") return <main className="grid min-h-screen place-items-center bg-[#08090d] p-4"><AppLoader label="Preparing your question" /></main>;
   if (stage === "error") {
     return (
       <ShellMessage>
@@ -112,12 +132,13 @@ export default function PracticePage({ params }: { params: { topicId: string } }
   if (!question) return null;
 
   return (
-    <main className="scroll-invisible min-h-screen bg-[#f4f5f7] p-3 pb-24 text-[#18181b] sm:p-4 sm:pb-24 xl:h-screen xl:overflow-y-auto xl:pb-4">
-      <section className="mx-auto max-w-6xl overflow-hidden rounded-[8px] bg-[#fafafa] shadow-2xl shadow-black/25">
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e4e4e7] bg-white px-4 py-5 sm:px-6">
+    <main className="scroll-invisible min-h-screen bg-[#08090d] p-3 pb-24 text-zinc-100 sm:p-4 sm:pb-24 xl:h-screen xl:overflow-y-auto xl:pb-4">
+      {celebrationKey > 0 && <ConfettiBurst key={celebrationKey} />}
+      <section className="mx-auto max-w-6xl overflow-hidden rounded-[10px] border border-white/[.08] bg-[#0d0f15] shadow-2xl shadow-black/30">
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[.07] bg-[#10131a] px-4 py-5 sm:px-6">
           <div>
-            <Link href="/" className="text-xs font-bold text-[#4b5563]">Back to dashboard</Link>
-            <h1 className="mt-2 text-2xl font-black">
+            <Link href="/" className="text-xs font-bold text-cyan-200">← Back to dashboard</Link>
+            <h1 className="mt-2 text-2xl font-semibold text-white">
               {stage === "breakdown" ? "Question Breakdown" : "Today's Question"}
             </h1>
           </div>
@@ -170,7 +191,7 @@ export default function PracticePage({ params }: { params: { topicId: string } }
                   </span>
                   {result?.breakdown_available && !result.correct_option && (
                     <button disabled={actionBusy} onClick={startBreakdown} className="rounded-[6px] bg-[#18181b] px-4 py-2 text-sm font-bold text-white disabled:opacity-50">
-                      {actionBusy ? "Loading breakdown..." : "Work through breakdown"}
+                      {actionBusy ? <InlineSpinner label="Preparing breakdown" /> : "Work through breakdown"}
                     </button>
                   )}
                 </div>
@@ -185,6 +206,7 @@ export default function PracticePage({ params }: { params: { topicId: string } }
             index={slideIndex}
             studentId={studentId}
             onSelect={setSlideIndex}
+            onCorrect={celebrateCorrectAnswer}
             onNext={() => {
               if (slideIndex + 1 >= slides.length) retryMainQuestion();
               else setSlideIndex((value) => value + 1);
@@ -213,9 +235,9 @@ function QuestionCard({
   onSubmit: () => void;
 }) {
   return (
-    <section className="rounded-[8px] border border-[#e4e4e7] bg-white p-4 sm:p-6">
-      <p className="text-xs font-black uppercase tracking-wide text-[#6b7280]">Question of Record</p>
-      <p className="mt-4 text-lg font-black leading-7 text-[#18181b] sm:text-xl sm:leading-8">{question.question_text}</p>
+    <section className="panel p-4 sm:p-6">
+      <p className="text-xs font-semibold uppercase tracking-wide text-cyan-300">Question of record</p>
+      <p className="mt-4 text-lg font-semibold leading-7 text-white sm:text-xl sm:leading-8">{question.question_text}</p>
       <div className="mt-6 space-y-3">
         {question.options.map((option) => (
           <button
@@ -237,9 +259,9 @@ function QuestionCard({
         <button
           disabled={!selected || busy}
           onClick={onSubmit}
-          className="mt-6 rounded-[6px] bg-[#18181b] px-5 py-3 text-sm font-bold text-white disabled:opacity-40"
+          className="primary-button mt-6 disabled:opacity-40"
         >
-          {busy ? "Submitting..." : "Submit Answer"}
+          {busy ? <InlineSpinner label="Submitting answer" /> : "Submit answer"}
         </button>
       )}
     </section>
@@ -251,12 +273,14 @@ function BreakdownDeck({
   index,
   studentId,
   onSelect,
+  onCorrect,
   onNext,
 }: {
   slides: BreakdownSlide[];
   index: number;
   studentId: string;
   onSelect: (index: number) => void;
+  onCorrect: () => void;
   onNext: () => void;
 }) {
   const slide = slides[index];
@@ -279,6 +303,7 @@ function BreakdownDeck({
     try {
       const response = await api.submitBreakdownAnswer({ student_id: studentId, slide_id: slide.id, selected_option: chosen });
       setFeedback(response);
+      if (response.is_correct) onCorrect();
     } catch (error: any) {
       setSubmitError(error.message || "Could not submit this answer. Please try again.");
     } finally {
@@ -287,40 +312,61 @@ function BreakdownDeck({
   }
 
   return (
-    <div className="grid lg:grid-cols-[280px_1fr]">
-      <aside className="scroll-invisible border-b border-[#e4e4e7] bg-white p-4 lg:max-h-[calc(100vh-98px)] lg:overflow-y-auto lg:border-b-0 lg:border-r">
-        <p className="mb-4 text-xs font-black">Breakdown</p>
-        <div className="space-y-3">
+    <div>
+      <nav
+        aria-label="Breakdown slides"
+        className="scroll-invisible overflow-x-auto border-b border-white/[.07] bg-[#10131a]"
+      >
+        <div role="tablist" className="flex min-w-max gap-2 p-3 sm:gap-3 sm:p-4">
           {slides.map((item, itemIndex) => (
             <button
               key={item.id}
+              id={`breakdown-tab-${item.id}`}
+              role="tab"
+              aria-selected={itemIndex === index}
+              aria-controls={`breakdown-panel-${item.id}`}
               onClick={() => onSelect(itemIndex)}
-              className={`flex w-full items-center gap-3 rounded-[6px] border p-3 text-left ${
-                itemIndex === index ? "border-[#3da35d] bg-[#f8fff9]" : "border-[#e4e4e7] bg-white"
+              className={`flex min-w-[150px] shrink-0 items-center gap-3 rounded-[8px] border px-3 py-2.5 text-left transition sm:min-w-[180px] ${
+                itemIndex === index
+                  ? "border-cyan-300/40 bg-cyan-300/10 text-white"
+                  : "border-white/[.08] bg-white/[.035] text-zinc-300 hover:border-white/20 hover:bg-white/[.06]"
               }`}
             >
-              <span className="text-xs font-black text-[#374151]">{item.slide_order}</span>
+              <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-black ${
+                itemIndex === index ? "bg-cyan-300 text-[#071016]" : "bg-white/[.08] text-zinc-400"
+              }`}>
+                {item.slide_order}
+              </span>
               <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-black text-[#3da35d] capitalize">{item.slide_type}</p>
-                <p className="truncate text-[11px] font-bold text-[#18181b]">{item.subject.replace("_", " ")}</p>
+                <p className={`text-[10px] font-black uppercase tracking-[0.14em] ${
+                  itemIndex === index ? "text-cyan-200" : "text-zinc-500"
+                }`}>
+                  {item.slide_type}
+                </p>
+                <p className="mt-0.5 truncate text-xs font-bold capitalize">{item.subject.replace("_", " ")}</p>
               </div>
             </button>
           ))}
         </div>
-      </aside>
+      </nav>
 
-      <section className="scroll-invisible min-h-[420px] bg-[#fafafa] p-4 sm:p-6 md:p-9 lg:max-h-[calc(100vh-98px)] lg:overflow-y-auto">
+      <section
+        id={`breakdown-panel-${slide.id}`}
+        role="tabpanel"
+        aria-labelledby={`breakdown-tab-${slide.id}`}
+        className="scroll-invisible min-h-[420px] bg-[#0d0f15] p-4 sm:p-6 md:p-9 lg:max-h-[calc(100vh-190px)] lg:overflow-y-auto"
+      >
         <span className="rounded-full bg-[#eaf7ee] px-3 py-1 text-xs font-bold text-[#287946]">
           {slide.slide_type} {index + 1} of {slides.length}
         </span>
 
         {slide.slide_type === "theory" ? (
-          <article className="mt-7 max-w-3xl whitespace-pre-wrap text-sm leading-7 text-[#27272a]">
+          <article className="mt-7 max-w-3xl whitespace-pre-wrap text-sm leading-7 text-zinc-300">
             {slide.content}
           </article>
         ) : (
           <div className="mt-7 max-w-3xl">
-            <h2 className="text-xl font-black text-[#18181b]">{slide.practice_question}</h2>
+            <h2 className="text-xl font-semibold text-white">{slide.practice_question}</h2>
             <div className="mt-5 space-y-3">
               {slide.practice_options?.map((option) => (
                 <button
@@ -340,9 +386,9 @@ function BreakdownDeck({
               <button
                 disabled={!chosen || submitting}
                 onClick={submitPractice}
-                className="mt-5 rounded-[6px] bg-[#18181b] px-5 py-3 text-sm font-bold text-white disabled:opacity-40"
+                className="primary-button mt-5 disabled:opacity-40"
               >
-                {submitting ? "Checking..." : "Check Answer"}
+                {submitting ? <InlineSpinner label="Checking answer" /> : "Check answer"}
               </button>
             )}
             {submitError && (
@@ -366,12 +412,40 @@ function BreakdownDeck({
           <button
             onClick={onNext}
             disabled={slide.slide_type === "practice" && !feedback}
-            className="rounded-[6px] bg-[#18181b] px-5 py-3 text-sm font-bold text-white disabled:opacity-40"
+            className="primary-button disabled:opacity-40"
           >
             {index + 1 >= slides.length ? "Return to Question" : "Next"}
           </button>
         </div>
       </section>
+    </div>
+  );
+}
+
+function ConfettiBurst() {
+  return (
+    <div className="confetti-stage" aria-live="polite" aria-atomic="true">
+      <div className="confetti-message" role="status">
+        <span className="confetti-check" aria-hidden="true">✓</span>
+        <span>
+          <strong>Correct!</strong>
+          <small>That answer is locked in.</small>
+        </span>
+      </div>
+      {CONFETTI_PARTICLES.map((particle, particleIndex) => (
+        <span
+          key={particleIndex}
+          aria-hidden="true"
+          className="confetti-piece"
+          style={{
+            "--confetti-x": `${particle.x}px`,
+            "--confetti-y": `${particle.y}px`,
+            "--confetti-rotation": `${particle.rotation}deg`,
+            "--confetti-delay": `${particle.delay}s`,
+            "--confetti-color": particle.color,
+          } as React.CSSProperties}
+        />
+      ))}
     </div>
   );
 }
@@ -388,8 +462,8 @@ function ResultBanner({ ok, children }: { ok: boolean; children: React.ReactNode
 
 function ShellMessage({ children }: { children: React.ReactNode }) {
   return (
-    <main className="grid min-h-screen place-items-center bg-[#f4f5f7] p-4">
-      <div className="rounded-[8px] bg-white px-5 py-4 text-sm font-semibold text-[#18181b]">{children}</div>
+    <main className="grid min-h-screen place-items-center bg-[#08090d] p-4">
+      <div className="panel px-5 py-4 text-sm font-semibold text-zinc-200">{children}</div>
     </main>
   );
 }
