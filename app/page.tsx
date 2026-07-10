@@ -53,23 +53,54 @@ export default function HomePage() {
   const [loadMessage, setLoadMessage] = useState("");
 
   useEffect(() => {
-    const token = getAuthToken();
-    const cached = getStoredStudent();
-    if (!token || !cached) {
-      setAuthReady(true);
-      return;
-    }
-    setStudent(cached);
-    Promise.all([api.me(), api.getDashboard()])
-      .then(([fresh, dashboard]) => {
+    let active = true;
+    let refreshing = false;
+
+    const refreshAccount = async () => {
+      if (refreshing) return;
+      const token = getAuthToken();
+      const cached = getStoredStudent();
+      if (!token || !cached) {
+        if (active) {
+          setStudent(null);
+          setStats(null);
+          setAuthReady(true);
+        }
+        return;
+      }
+
+      refreshing = true;
+      if (active) setStudent(cached);
+      try {
+        const [fresh, dashboard] = await Promise.all([api.me(), api.getDashboard()]);
+        if (!active) return;
         updateStoredStudent(fresh);
         setStudent(fresh);
         setStats(dashboard);
-      })
-      .catch(() => {
-        if (!getAuthToken()) setStudent(null);
-      })
-      .finally(() => setAuthReady(true));
+      } catch {
+        if (active && !getAuthToken()) {
+          setStudent(null);
+          setStats(null);
+        }
+      } finally {
+        refreshing = false;
+        if (active) setAuthReady(true);
+      }
+    };
+    const refreshWhenVisible = () => {
+      if (!document.hidden) void refreshAccount();
+    };
+
+    void refreshAccount();
+    window.addEventListener("pageshow", refreshAccount);
+    window.addEventListener("focus", refreshAccount);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => {
+      active = false;
+      window.removeEventListener("pageshow", refreshAccount);
+      window.removeEventListener("focus", refreshAccount);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
   }, []);
 
   useEffect(() => {
@@ -146,6 +177,7 @@ function LoginScreen({ onAuthed }: { onAuthed: (student: StudentProfile) => void
   const [otp, setOtp] = useState("");
   const [name, setName] = useState("");
   const [targetExam, setTargetExam] = useState("UPSC Prelims");
+  const [accountExists, setAccountExists] = useState<boolean | null>(null);
   const [step, setStep] = useState<"email" | "otp">("email");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -154,9 +186,12 @@ function LoginScreen({ onAuthed }: { onAuthed: (student: StudentProfile) => void
     setBusy(true);
     setMessage("");
     try {
-      await api.requestOtp(email);
+      const response = await api.requestOtp(email.trim());
+      setAccountExists(response.account_exists);
       setStep("otp");
-      setMessage("OTP sent. Check your email inbox.");
+      setMessage(response.account_exists
+        ? "OTP sent. Enter it to sign in."
+        : "OTP sent. Add your profile details once to create the account.");
     } catch (error: any) {
       setMessage(error.message || "Could not send OTP");
     } finally {
@@ -168,7 +203,13 @@ function LoginScreen({ onAuthed }: { onAuthed: (student: StudentProfile) => void
     setBusy(true);
     setMessage("");
     try {
-      const session = await api.verifyOtp({ email, otp, name: name || undefined, target_exam: targetExam });
+      const session = await api.verifyOtp({
+        email: email.trim(),
+        otp,
+        ...(accountExists === false
+          ? { name: name.trim() || undefined, target_exam: targetExam }
+          : {}),
+      });
       setAuthSession(session);
       onAuthed(session.student);
     } catch (error: any) {
@@ -194,7 +235,7 @@ function LoginScreen({ onAuthed }: { onAuthed: (student: StudentProfile) => void
               </p>
             </div>
             <div className="grid grid-cols-2 gap-3 text-sm">
-              {["One email per device", "One active session", "2 hour sessions", "Email OTP login"].map((item) => (
+              {["One email per device", "One active session", "30-day sessions", "Email OTP login"].map((item) => (
                 <div key={item} className="rounded-[8px] border border-white/15 bg-white/10 p-4">
                   {item}
                 </div>
@@ -208,7 +249,7 @@ function LoginScreen({ onAuthed }: { onAuthed: (student: StudentProfile) => void
             <LogoMark dark />
             <h2 className="mt-8 text-2xl font-black text-[#18181b]">Sign in with email OTP</h2>
             <p className="mt-2 text-sm text-[#6b7280]">
-              Each device can be linked to one email only. Sessions expire every 2 hours.
+              Each device can be linked to one email only. You stay signed in for up to 30 days.
             </p>
 
             <div className="mt-8 space-y-4">
@@ -234,24 +275,26 @@ function LoginScreen({ onAuthed }: { onAuthed: (student: StudentProfile) => void
                       placeholder="000000"
                     />
                   </label>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <input
-                      value={name}
-                      onChange={(event) => setName(event.target.value)}
-                      className="rounded-[8px] border border-[#e4e4e7] bg-white px-4 py-3 text-sm outline-none focus:border-[#18181b]"
-                      placeholder="Name"
-                    />
-                    <select
-                      value={targetExam}
-                      onChange={(event) => setTargetExam(event.target.value)}
-                      className="rounded-[8px] border border-[#e4e4e7] bg-white px-4 py-3 text-sm outline-none focus:border-[#18181b]"
-                    >
-                      <option>UPSC Prelims</option>
-                      <option>SSC CGL</option>
-                      <option>State PSC</option>
-                      <option>Banking</option>
-                    </select>
-                  </div>
+                  {accountExists === false && (
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <input
+                        value={name}
+                        onChange={(event) => setName(event.target.value)}
+                        className="rounded-[8px] border border-[#e4e4e7] bg-white px-4 py-3 text-sm outline-none focus:border-[#18181b]"
+                        placeholder="Name"
+                      />
+                      <select
+                        value={targetExam}
+                        onChange={(event) => setTargetExam(event.target.value)}
+                        className="rounded-[8px] border border-[#e4e4e7] bg-white px-4 py-3 text-sm outline-none focus:border-[#18181b]"
+                      >
+                        <option>UPSC Prelims</option>
+                        <option>SSC CGL</option>
+                        <option>State PSC</option>
+                        <option>Banking</option>
+                      </select>
+                    </div>
+                  )}
                 </>
               )}
             </div>
@@ -265,6 +308,20 @@ function LoginScreen({ onAuthed }: { onAuthed: (student: StudentProfile) => void
             >
               {busy ? "Please wait..." : step === "email" ? "Send OTP" : "Verify and Enter"}
             </button>
+            {step === "otp" && (
+              <button
+                type="button"
+                onClick={() => {
+                  setStep("email");
+                  setOtp("");
+                  setAccountExists(null);
+                  setMessage("");
+                }}
+                className="mt-3 w-full px-3 py-2 text-xs font-bold text-[#6b7280]"
+              >
+                Use a different email
+              </button>
+            )}
           </div>
         </section>
       </div>

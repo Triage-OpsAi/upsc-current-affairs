@@ -11,17 +11,47 @@ export default function ReportsPage() {
   const [status, setStatus] = useState("Loading report...");
 
   useEffect(() => {
-    if (!getAuthToken()) {
-      setStatus("Please sign in from the home screen.");
-      return;
-    }
-    api
-      .getMyReport()
-      .then((value) => {
-        setReport(value);
-        setStatus("");
-      })
-      .catch(() => setStatus("No report has been generated for today yet."));
+    let active = true;
+    let loading = false;
+    const loadReport = async () => {
+      if (loading) return;
+      if (!getAuthToken()) {
+        if (active) setStatus("Please sign in from the home screen.");
+        return;
+      }
+      loading = true;
+      if (active && !report) setStatus("Loading your latest report...");
+      try {
+        const value = await api.getMyReport();
+        if (active) {
+          setReport(value);
+          setStatus("");
+        }
+      } catch {
+        if (active) {
+          setReport(null);
+          setStatus(getAuthToken()
+            ? "No saved practice attempts were found for this account yet."
+            : "Your session has expired. Please sign in again from the home screen.");
+        }
+      } finally {
+        loading = false;
+      }
+    };
+    const loadWhenVisible = () => {
+      if (!document.hidden) void loadReport();
+    };
+
+    void loadReport();
+    window.addEventListener("pageshow", loadReport);
+    window.addEventListener("focus", loadReport);
+    document.addEventListener("visibilitychange", loadWhenVisible);
+    return () => {
+      active = false;
+      window.removeEventListener("pageshow", loadReport);
+      window.removeEventListener("focus", loadReport);
+      document.removeEventListener("visibilitychange", loadWhenVisible);
+    };
   }, []);
 
   return (
@@ -30,7 +60,7 @@ export default function ReportsPage() {
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e4e4e7] bg-white px-4 py-5 sm:px-6">
           <div>
             <Link href="/" className="text-xs font-bold text-[#4b5563]">Back to dashboard</Link>
-            <h1 className="mt-2 text-2xl font-black">Daily Report</h1>
+            <h1 className="mt-2 text-2xl font-black">Personalized Report</h1>
           </div>
           {report && <p className="text-sm font-bold text-[#6b7280]">{report.report_date}</p>}
         </header>
@@ -38,7 +68,7 @@ export default function ReportsPage() {
         <div className="p-4 sm:p-6">
           {status && !report && (
             <div className="rounded-[8px] border border-[#e4e4e7] bg-white p-6 text-sm font-semibold text-[#6b7280]">
-              {status} Reports are generated after midnight IST from real attempts in the database.
+              {status}
             </div>
           )}
 
@@ -63,9 +93,9 @@ export default function ReportsPage() {
                 </section>
 
                 <section className="rounded-[8px] border border-[#e4e4e7] bg-white p-5">
-                  <p className="text-sm font-black">Your Rank (Today)</p>
+                  <p className="text-sm font-black">Your Rank ({report.report_date})</p>
                   <p className="mt-4 text-3xl font-black text-[#18181b]">{report.percentile}%</p>
-                  <p className="mt-2 text-sm text-[#6b7280]">Percentile among active aspirants today.</p>
+                  <p className="mt-2 text-sm text-[#6b7280]">Percentile among aspirants active on this report date.</p>
                 </section>
 
                 <section className="rounded-[8px] border border-[#e4e4e7] bg-white p-5">

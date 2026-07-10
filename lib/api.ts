@@ -23,12 +23,13 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     res = await fetch(`${API_BASE}${path}`, {
       ...options,
       headers,
+      cache: options.cache ?? "no-store",
     });
   } catch {
     throw new Error("Could not connect to the server. Please start the backend and try again.");
   }
   if (!res.ok) {
-    if (res.status === 401 || res.status === 403) {
+    if (res.status === 401) {
       clearAuthSession();
     }
     throw new Error(messageForStatus(res.status));
@@ -117,7 +118,7 @@ export interface DashboardStats {
 
 export const api = {
   requestOtp: (email: string) =>
-    request<{ ok: boolean; expires_in_minutes: number; dev_otp: string | null }>(`/api/auth/request-otp`, {
+    request<{ ok: boolean; expires_in_minutes: number; account_exists: boolean; dev_otp: string | null }>(`/api/auth/request-otp`, {
       method: "POST",
       body: JSON.stringify({ email, purpose: "login" }),
     }),
