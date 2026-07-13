@@ -10,6 +10,7 @@ import { getAuthToken } from "../../lib/student";
 export default function ReportsPage() {
   const [report, setReport] = useState<DailyReport | null>(null);
   const [status, setStatus] = useState("Loading report...");
+  const [showContentChangedToast, setShowContentChangedToast] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -27,6 +28,7 @@ export default function ReportsPage() {
         if (active) {
           setReport(value);
           setStatus("");
+          setShowContentChangedToast(Boolean(value.content_changed));
         }
       } catch {
         if (active) {
@@ -57,6 +59,30 @@ export default function ReportsPage() {
 
   return (
     <main className="scroll-invisible min-h-screen bg-[#08090d] p-3 pb-24 text-zinc-100 sm:p-4 sm:pb-24 xl:h-screen xl:overflow-y-auto xl:pb-4">
+      {showContentChangedToast && report?.content_changed && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed right-4 top-4 z-50 max-w-sm rounded-xl border border-amber-300/30 bg-[#18140d] p-4 text-sm text-amber-50 shadow-2xl shadow-black/50"
+        >
+          <div className="flex items-start gap-3">
+            <div className="flex-1">
+              <p className="font-semibold">Practice content updated</p>
+              <p className="mt-1 leading-5 text-amber-100/75">
+                {report.content_change_notice ?? "Some questions in this history were upgraded. Your original scores and marks are preserved."}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowContentChangedToast(false)}
+              className="rounded-md px-2 py-1 text-amber-100/70 hover:bg-white/10 hover:text-white"
+              aria-label="Dismiss content update notice"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
       <section className="mx-auto max-w-6xl overflow-hidden rounded-[10px] border border-white/[.08] bg-[#0d0f15] shadow-2xl shadow-black/30">
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[.07] bg-[#10131a] px-4 py-5 sm:px-6">
           <div>
@@ -161,11 +187,14 @@ export default function ReportsPage() {
                     const tone = value.accuracy >= 80 ? "text-emerald-300" : value.accuracy >= 50 ? "text-amber-300" : "text-rose-300";
                     const bar = value.accuracy >= 80 ? "bg-emerald-400" : value.accuracy >= 50 ? "bg-amber-400" : "bg-rose-400";
                     return (
-                      <article key={value.topic_id} className="rounded-xl border border-white/[.08] bg-white/[.025] p-4">
+                      <article key={`${concept}-${value.topic_id ?? "archived"}`} className="rounded-xl border border-white/[.08] bg-white/[.025] p-4">
                         <div className="flex items-start justify-between gap-4">
                           <div>
                             <h3 className="font-semibold leading-5 text-zinc-100">{concept}</h3>
                             <p className="mt-1 text-xs text-zinc-500">{value.correct} correct / {value.total} attempted</p>
+                            {value.content_changed && (
+                              <p className="mt-2 text-[11px] font-semibold text-amber-200">Question content updated; score preserved</p>
+                            )}
                           </div>
                           <span className={`shrink-0 text-xs font-black ${tone}`}>{level}</span>
                         </div>

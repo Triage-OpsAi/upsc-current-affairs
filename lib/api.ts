@@ -158,10 +158,11 @@ export interface DailyReport {
   percentile: number;
   subject_breakdown: Record<string, { total: number; correct: number }>;
   concept_breakdown: Record<string, {
-    topic_id: string;
+    topic_id: string | null;
     total: number;
     correct: number;
     accuracy: number;
+    content_changed?: boolean;
   }>;
   practice_recommendations: Array<{
     concept: string;
@@ -171,6 +172,8 @@ export interface DailyReport {
   }>;
   exam_wise_readiness: Record<string, number>;
   ai_feedback: string | null;
+  content_changed: boolean;
+  content_change_notice: string | null;
 }
 
 export interface DashboardStats {
