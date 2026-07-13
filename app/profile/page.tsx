@@ -6,6 +6,7 @@ import Image from "next/image";
 import { MobileNav } from "../components/MobileNav";
 import { AppLoader, InlineSpinner } from "../components/AppLoader";
 import { OfferCard } from "../components/OfferCard";
+import { SiteFooter } from "../components/SiteFooter";
 import { api } from "../../lib/api";
 import { AVATAR_OPTIONS, selectedAvatarUrl } from "../../lib/avatars";
 import {
@@ -176,6 +177,7 @@ export default function ProfilePage() {
           </section>
         </div>
       </section>
+      <div className="mx-auto max-w-5xl"><SiteFooter compact /></div>
       <MobileNav active="settings" />
     </main>
   );

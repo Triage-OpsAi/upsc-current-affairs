@@ -6,6 +6,7 @@ import Image from "next/image";
 import { MobileNav } from "./components/MobileNav";
 import { AppLoader, InlineSpinner } from "./components/AppLoader";
 import { OfferCard } from "./components/OfferCard";
+import { SiteFooter } from "./components/SiteFooter";
 import { api, ApiError, DashboardStats, Topic, TopicListResponse } from "../lib/api";
 import { selectedAvatarUrl } from "../lib/avatars";
 import { formatQuestionText } from "../lib/question-text";
@@ -198,6 +199,7 @@ export default function HomePage() {
               </section>
             </div>
           </div>
+          <SiteFooter compact />
         </section>
       </div>
       <MobileNav active="home" />
@@ -407,7 +409,7 @@ function LoginScreen({ onAuthed }: { onAuthed: (student: StudentProfile) => void
         </section>
       </div>
       </section>
-      <footer className="border-t border-white/[.07] px-4 py-8 text-center text-xs text-zinc-600">AspirantOS · Current affairs practice built for consistent revision.</footer>
+      <SiteFooter />
     </main>
   );
 }

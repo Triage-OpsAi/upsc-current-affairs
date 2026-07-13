@@ -244,6 +244,13 @@ select:focus,
 .scroll-invisible { -ms-overflow-style: none; scrollbar-width: none; }
 .scroll-invisible::-webkit-scrollbar { display: none; }
 
+.legal-copy section + section { margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--line); }
+.legal-copy h2 { color: #fff; font-size: 1.05rem; font-weight: 800; line-height: 1.5; }
+.legal-copy p { margin-top: .75rem; color: #a1a1aa; font-size: .9rem; line-height: 1.8; }
+.legal-copy ul { margin-top: .8rem; padding-left: 1.25rem; color: #a1a1aa; font-size: .9rem; line-height: 1.8; list-style: disc; }
+.legal-copy a { color: #a5f3fc; text-decoration: underline; text-decoration-color: rgba(165,243,252,.35); text-underline-offset: 3px; }
+.legal-copy a:hover { color: #ecfeff; }
+
 /* Compatibility layer while legacy page markup is moved onto the theme. */
 .dark-app [class~="bg-white"] { background-color: var(--panel) !important; }
 .dark-app [class*="bg-[#f4f5f7]"] { background-color: var(--background) !important; }

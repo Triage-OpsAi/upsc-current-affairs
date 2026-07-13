@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { MobileNav } from "../components/MobileNav";
 import { AppLoader } from "../components/AppLoader";
+import { SiteFooter } from "../components/SiteFooter";
 import { formatQuestionText } from "../../lib/question-text";
 import { api, ArchiveMonth, Topic, TopicListResponse } from "../../lib/api";
 import { getAuthToken } from "../../lib/student";
@@ -196,6 +197,7 @@ export default function ArchivePage() {
           )}
         </section>
       </section>
+      <div className="mx-auto max-w-5xl"><SiteFooter compact /></div>
       <MobileNav active="archive" />
     </main>
   );

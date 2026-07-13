@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { MobileNav } from "../components/MobileNav";
 import { AppLoader } from "../components/AppLoader";
+import { SiteFooter } from "../components/SiteFooter";
 import { api, DailyReport } from "../../lib/api";
 import { getAuthToken } from "../../lib/student";
 
@@ -252,6 +253,7 @@ export default function ReportsPage() {
           )}
         </div>
       </section>
+      <div className="mx-auto max-w-6xl"><SiteFooter compact /></div>
       <MobileNav active="reports" />
     </main>
   );

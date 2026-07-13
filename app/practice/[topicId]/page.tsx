@@ -5,6 +5,7 @@ import Link from "next/link";
 import { MobileNav } from "../../components/MobileNav";
 import { AppLoader, InlineSpinner } from "../../components/AppLoader";
 import { OfferCard } from "../../components/OfferCard";
+import { SiteFooter } from "../../components/SiteFooter";
 import { formatQuestionText } from "../../../lib/question-text";
 import { api, ApiError, AttemptResult, BreakdownSlide, Question, Topic } from "../../../lib/api";
 import { ensureStudentId, getStoredStudent } from "../../../lib/student";
@@ -267,6 +268,7 @@ export default function PracticePage({ params }: { params: { topicId: string } }
           />
         )}
       </section>
+      <div className="mx-auto max-w-6xl"><SiteFooter compact /></div>
       <MobileNav active="today" />
     </main>
   );
