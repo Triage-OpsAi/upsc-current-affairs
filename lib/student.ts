@@ -11,6 +11,14 @@ export interface StudentProfile {
   recent_device_count?: number;
   device_limit?: number;
   device_warning?: string | null;
+  subscription_status?: "trial" | "active" | "expired";
+  has_content_access?: boolean;
+  trial_ends_at?: string | null;
+  trial_days_remaining?: number;
+  early_offer_eligible?: boolean;
+  early_offer_number?: number | null;
+  monthly_price_inr?: number;
+  standard_monthly_price_inr?: number;
 }
 
 export interface AuthSession {

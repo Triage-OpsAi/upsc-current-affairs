@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { MobileNav } from "./components/MobileNav";
 import { AppLoader, InlineSpinner } from "./components/AppLoader";
+import { OfferCard } from "./components/OfferCard";
 import { api, ApiError, DashboardStats, Topic, TopicListResponse } from "../lib/api";
 import { selectedAvatarUrl } from "../lib/avatars";
 import { formatQuestionText } from "../lib/question-text";
@@ -162,6 +163,7 @@ export default function HomePage() {
                   {student.device_warning}
                 </section>
               )}
+              <OfferCard student={student} compact actionHref="/profile#membership" />
               <section className="panel p-5">
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                   <div><p className="text-xs font-semibold uppercase text-cyan-300">Practice workspace</p><h2 className="mt-1 text-lg font-semibold text-white">Continue your preparation</h2></div>
@@ -213,6 +215,11 @@ function LoginScreen({ onAuthed }: { onAuthed: (student: StudentProfile) => void
   const [step, setStep] = useState<"email" | "otp">("email");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [offerSpots, setOfferSpots] = useState<number | null>(null);
+
+  useEffect(() => {
+    void api.getOffer().then((offer) => setOfferSpots(offer.spots_remaining)).catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     if (step !== "otp" || resendIn <= 0) return;
@@ -301,11 +308,17 @@ function LoginScreen({ onAuthed }: { onAuthed: (student: StudentProfile) => void
         </div>
       </section>
 
+      <section className="border-b border-white/[.07] px-4 py-10 sm:px-6">
+        <div className="mx-auto max-w-7xl">
+          <OfferCard spotsRemaining={offerSpots} compact />
+        </div>
+      </section>
+
       <section id="system" className="border-b border-white/[.07] px-4 py-20 sm:px-6"><div className="mx-auto max-w-7xl"><p className="text-xs font-semibold uppercase text-cyan-300">The system</p><h2 className="mt-4 max-w-3xl text-3xl font-semibold text-white md:text-5xl">A calm study workspace built for repeated, focused work.</h2><div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-4">{[["Practice", "Only available questions appear—no dead tabs or empty routes."], ["Understand", "Six-part breakdowns connect facts, concepts, and exam logic."], ["Track", "Reports use your real attempts and surface weak subjects."], ["Return", "Secure sessions and cached state keep your workspace ready."]].map(([title, text], index) => <article key={title} className="panel p-5"><div className="grid size-10 place-items-center rounded-lg bg-cyan-300/10 text-sm font-semibold text-cyan-100">0{index + 1}</div><h3 className="mt-5 text-sm font-semibold text-white">{title}</h3><p className="mt-3 text-sm leading-6 text-zinc-500">{text}</p></article>)}</div></div></section>
 
       <section id="workflow" className="border-b border-white/[.07] px-4 py-20 sm:px-6"><div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[.8fr_1.2fr]"><div><p className="text-xs font-semibold uppercase text-emerald-300">Workflow</p><h2 className="mt-4 text-3xl font-semibold text-white md:text-5xl">Read less randomly. Recall more deliberately.</h2><p className="mt-4 text-sm leading-7 text-zinc-500">Every session follows a clear loop from question to concept to measurable progress.</p></div><div className="grid gap-3 sm:grid-cols-3">{[["01", "Choose a month", "Filter the archive to the period you want to revise."], ["02", "Answer and learn", "Submit once, then use the breakdown when a concept needs work."], ["03", "Review the signal", "Use subject and readiness scores to plan the next session."]].map(([number, title, text]) => <div key={number} className="rounded-lg border border-white/[.08] bg-white/[.035] p-5"><div className="text-xs font-semibold text-emerald-200">{number}</div><h3 className="mt-4 text-sm font-semibold text-white">{title}</h3><p className="mt-2 text-sm leading-6 text-zinc-500">{text}</p></div>)}</div></div></section>
 
-      <section id="signin" className="relative px-4 py-20 sm:px-6"><div className="pointer-events-none absolute inset-0 grid-fade opacity-35" /><div className="relative mx-auto grid max-w-6xl gap-8 lg:grid-cols-[.9fr_1.1fr]"><div className="self-center"><p className="text-xs font-semibold uppercase text-amber-300">Secure workspace</p><h2 className="mt-4 text-4xl font-semibold text-white md:text-5xl">Continue where you stopped.</h2><p className="mt-4 max-w-lg text-sm leading-7 text-zinc-500">Email OTP keeps the account passwordless. Returning users enter only email and OTP, and sessions remain active for up to 30 days.</p><div className="mt-8 grid gap-3 sm:grid-cols-2">{["One account per device", "Redis-cached sessions", "Progress saved automatically", "Device-limit warnings"].map((item) => <div key={item} className="rounded-lg border border-white/[.08] bg-white/[.035] p-4 text-sm text-zinc-300">{item}</div>)}</div></div>
+      <section id="signin" className="relative px-4 py-20 sm:px-6"><div className="pointer-events-none absolute inset-0 grid-fade opacity-35" /><div className="relative mx-auto mb-8 max-w-6xl"><OfferCard spotsRemaining={offerSpots} compact /></div><div className="relative mx-auto grid max-w-6xl gap-8 lg:grid-cols-[.9fr_1.1fr]"><div className="self-center"><p className="text-xs font-semibold uppercase text-amber-300">Secure workspace</p><h2 className="mt-4 text-4xl font-semibold text-white md:text-5xl">Continue where you stopped.</h2><p className="mt-4 max-w-lg text-sm leading-7 text-zinc-500">Email OTP keeps the account passwordless. Returning users enter only email and OTP, and sessions remain active for up to 30 days.</p><div className="mt-8 grid gap-3 sm:grid-cols-2">{["One account per device", "Redis-cached sessions", "Progress saved automatically", "Device-limit warnings"].map((item) => <div key={item} className="rounded-lg border border-white/[.08] bg-white/[.035] p-4 text-sm text-zinc-300">{item}</div>)}</div></div>
 
         <section className="panel p-6 sm:p-8">
           <div className="flex items-center gap-3"><span className="grid size-10 place-items-center rounded-lg border border-cyan-300/20 bg-cyan-300/10 text-sm font-black text-cyan-100">CA</span><div><h2 className="text-xl font-semibold text-white">Sign in with email OTP</h2><p className="mt-1 text-xs text-zinc-500">Your study history stays attached to this account.</p></div></div>

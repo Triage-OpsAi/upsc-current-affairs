@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { OfferNudge } from "./OfferNudge";
 
 const mobileNavItems = [
   ["home", "Home", "/", "M3 10.5 12 3l9 7.5M5 9v10h14V9M9 19v-6h6v6"],
@@ -11,6 +12,7 @@ const mobileNavItems = [
 
 export function MobileNav({ active }: { active: string }) {
   return (
+    <>
     <nav className="fixed inset-x-3 bottom-3 z-50 grid grid-cols-4 rounded-[10px] border border-white/[.09] bg-[#10131a]/95 p-1 shadow-2xl shadow-black/40 backdrop-blur-xl xl:hidden">
       {mobileNavItems.map(([key, label, href, path]) => (
         <Link
@@ -28,6 +30,8 @@ export function MobileNav({ active }: { active: string }) {
         </Link>
       ))}
     </nav>
+    <OfferNudge />
+    </>
   );
 }
 

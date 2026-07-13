@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { MobileNav } from "../../components/MobileNav";
 import { AppLoader, InlineSpinner } from "../../components/AppLoader";
+import { OfferCard } from "../../components/OfferCard";
 import { formatQuestionText } from "../../../lib/question-text";
-import { api, AttemptResult, BreakdownSlide, Question, Topic } from "../../../lib/api";
-import { ensureStudentId } from "../../../lib/student";
+import { api, ApiError, AttemptResult, BreakdownSlide, Question, Topic } from "../../../lib/api";
+import { ensureStudentId, getStoredStudent } from "../../../lib/student";
 
 type Stage = "loading" | "question" | "answered-correct" | "answered-wrong" | "breakdown" | "retry" | "error";
 
@@ -33,6 +34,7 @@ export default function PracticePage({ params }: { params: { topicId: string } }
   const [slides, setSlides] = useState<BreakdownSlide[]>([]);
   const [slideIndex, setSlideIndex] = useState(0);
   const [errorMsg, setErrorMsg] = useState("");
+  const [errorCode, setErrorCode] = useState<string | null>(null);
   const [actionError, setActionError] = useState("");
   const [actionBusy, setActionBusy] = useState(false);
   const [celebrationKey, setCelebrationKey] = useState(0);
@@ -50,6 +52,7 @@ export default function PracticePage({ params }: { params: { topicId: string } }
       setSlides([]);
       setSlideIndex(0);
       setErrorMsg("");
+      setErrorCode(null);
       setActionError("");
       const sid = await ensureStudentId();
       setStudentId(sid);
@@ -61,6 +64,7 @@ export default function PracticePage({ params }: { params: { topicId: string } }
       setNextTopic(next.topic);
       setStage("question");
     } catch (error: any) {
+      setErrorCode(error instanceof ApiError ? error.code : null);
       setErrorMsg(error.message || "Something went wrong");
       setStage("error");
     }
@@ -88,6 +92,12 @@ export default function PracticePage({ params }: { params: { topicId: string } }
       if (response.is_correct) celebrateCorrectAnswer();
       setStage(response.is_correct ? "answered-correct" : "answered-wrong");
     } catch (error: any) {
+      if (error instanceof ApiError && error.code === "trial_expired") {
+        setErrorCode(error.code);
+        setErrorMsg(error.message);
+        setStage("error");
+        return;
+      }
       setActionError(error.message || "Could not submit your answer. Tap submit to try again.");
     } finally {
       setActionBusy(false);
@@ -104,6 +114,12 @@ export default function PracticePage({ params }: { params: { topicId: string } }
       setSlideIndex(0);
       setStage("breakdown");
     } catch (error: any) {
+      if (error instanceof ApiError && error.code === "trial_expired") {
+        setErrorCode(error.code);
+        setErrorMsg(error.message);
+        setStage("error");
+        return;
+      }
       setActionError(error.message || "Could not load the breakdown. Please try again.");
     } finally {
       setActionBusy(false);
@@ -118,6 +134,19 @@ export default function PracticePage({ params }: { params: { topicId: string } }
 
   if (stage === "loading") return <main className="grid min-h-screen place-items-center bg-[#08090d] p-4"><AppLoader label="Preparing your question" /></main>;
   if (stage === "error") {
+    if (errorCode === "trial_expired") {
+      return (
+        <main className="grid min-h-screen place-items-center bg-[#08090d] p-4 text-zinc-100">
+          <div className="w-full max-w-4xl">
+            <OfferCard student={getStoredStudent()} actionHref="/profile#membership" />
+            <div className="mt-4 flex justify-center gap-4 text-sm font-bold">
+              <Link href="/profile#membership" className="text-cyan-200 hover:text-cyan-100">View membership</Link>
+              <Link href="/reports" className="text-zinc-400 hover:text-white">Review saved scores</Link>
+            </div>
+          </div>
+        </main>
+      );
+    }
     return (
       <ShellMessage>
         <p>Could not load this question: {errorMsg}</p>

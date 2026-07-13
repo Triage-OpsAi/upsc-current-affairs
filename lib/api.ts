@@ -91,6 +91,7 @@ async function errorFromResponse(res: Response): Promise<ApiError> {
 function messageForStatus(status: number): string {
   if (status === 400) return "The code or details you entered are not valid.";
   if (status === 401) return "Your session has expired. Please sign in again.";
+  if (status === 402) return "Your free trial has ended. Choose a plan to continue.";
   if (status === 403) return "This action is not allowed for this account or device.";
   if (status === 404) return "No saved data is available for this screen yet.";
   if (status === 429) return "Too many attempts. Please wait and try again.";
@@ -114,6 +115,14 @@ export interface ArchiveMonth {
   year: number;
   month: number;
   question_count: number;
+}
+
+export interface OfferSummary {
+  trial_days: number;
+  standard_monthly_price_inr: number;
+  early_monthly_price_inr: number;
+  early_offer_limit: number;
+  spots_remaining: number;
 }
 
 export interface TopicListResponse {
@@ -187,6 +196,7 @@ export interface DashboardStats {
 }
 
 export const api = {
+  getOffer: () => request<OfferSummary>(`/api/subscription/offer`),
   requestOtp: (email: string) =>
     request<{ ok: boolean; expires_in_minutes: number; account_exists: boolean; resend_after_seconds: number; dev_otp: string | null }>(`/api/auth/request-otp`, {
       method: "POST",

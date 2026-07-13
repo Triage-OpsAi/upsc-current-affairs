@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { MobileNav } from "../components/MobileNav";
 import { AppLoader, InlineSpinner } from "../components/AppLoader";
+import { OfferCard } from "../components/OfferCard";
 import { api } from "../../lib/api";
 import { AVATAR_OPTIONS, selectedAvatarUrl } from "../../lib/avatars";
 import {
@@ -95,6 +96,10 @@ export default function ProfilePage() {
             Log out
           </button>
         </header>
+
+        <div id="membership" className="p-4 pb-0 sm:p-6 sm:pb-0">
+          <OfferCard student={student} showAction={false} />
+        </div>
 
         <div className="grid gap-6 p-4 sm:p-6 lg:grid-cols-[320px_1fr]">
           <aside className="panel p-5">
