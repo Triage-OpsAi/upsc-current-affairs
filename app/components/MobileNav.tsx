@@ -16,8 +16,11 @@ export function MobileNav({ active }: { active: string }) {
         <Link
           key={key}
           href={href}
-          className={`flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-1 py-2 text-[10px] font-bold ${
-            active === key ? "bg-white text-zinc-950" : "text-zinc-500"
+          aria-current={active === key ? "page" : undefined}
+          className={`flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg border px-1 py-2 text-[10px] font-bold transition ${
+            active === key
+              ? "border-cyan-200 bg-cyan-300 text-[#071016] shadow-[0_0_0_2px_rgba(103,232,249,0.18),0_8px_24px_rgba(34,211,238,0.18)]"
+              : "border-transparent text-zinc-400 hover:bg-white/[.06] hover:text-white"
           }`}
         >
           <Icon path={path} />

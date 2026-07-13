@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { MobileNav } from "../components/MobileNav";
 import { AppLoader } from "../components/AppLoader";
+import { formatQuestionText } from "../../lib/question-text";
 import { api, ArchiveMonth, Topic, TopicListResponse } from "../../lib/api";
 import { getAuthToken } from "../../lib/student";
 
@@ -161,8 +162,8 @@ export default function ArchivePage() {
                         {(page - 1) * 10 + index + 1}
                       </span>
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold leading-6 text-white">
-                          {topic.question_text || topic.title}
+                        <p className="whitespace-pre-line text-sm font-semibold leading-6 text-white">
+                          {formatQuestionText(topic.question_text || topic.title)}
                         </p>
                         {topic.question_text && (
                           <p className="mt-2 text-xs font-bold text-zinc-500">Topic: {topic.title}</p>

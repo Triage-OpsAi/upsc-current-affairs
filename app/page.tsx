@@ -7,6 +7,7 @@ import { MobileNav } from "./components/MobileNav";
 import { AppLoader, InlineSpinner } from "./components/AppLoader";
 import { api, ApiError, DashboardStats, Topic, TopicListResponse } from "../lib/api";
 import { selectedAvatarUrl } from "../lib/avatars";
+import { formatQuestionText } from "../lib/question-text";
 import {
   StudentProfile,
   clearAuthSession,
@@ -421,8 +422,11 @@ function Sidebar({
           <Link
             href={href}
             key={key}
-            className={`flex h-10 items-center gap-3 rounded-[6px] px-4 text-sm font-semibold ${
-              active === key ? "bg-white text-zinc-950" : "text-zinc-400 hover:bg-white/[.05] hover:text-white"
+            aria-current={active === key ? "page" : undefined}
+            className={`flex h-10 items-center gap-3 rounded-[6px] border px-4 text-sm font-semibold transition ${
+              active === key
+                ? "border-cyan-200 bg-cyan-300 text-[#071016] shadow-[0_0_0_2px_rgba(103,232,249,0.12)]"
+                : "border-transparent text-zinc-400 hover:bg-white/[.05] hover:text-white"
             }`}
           >
             <Icon path={path} className="h-4 w-4" />
@@ -533,8 +537,8 @@ function QuestionPreview({
       <p className="mt-4 max-w-xl text-sm leading-6 text-zinc-400">
         {loadMessage || topic?.summary || "No practice question is available for this month yet."}
       </p>
-      <p className="mt-3 text-sm font-semibold text-white">
-        {topic?.question_text || topic?.title || (loadMessage ? "Practice is temporarily unavailable." : "No question available.")}
+      <p className="mt-3 whitespace-pre-line text-sm font-semibold leading-6 text-white">
+        {formatQuestionText(topic?.question_text || topic?.title || (loadMessage ? "Practice is temporarily unavailable." : "No question available."))}
       </p>
       <div className="mt-6 flex flex-wrap items-center gap-5">
         {topic ? (

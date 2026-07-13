@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { MobileNav } from "../../components/MobileNav";
 import { AppLoader, InlineSpinner } from "../../components/AppLoader";
+import { formatQuestionText } from "../../../lib/question-text";
 import { api, AttemptResult, BreakdownSlide, Question, Topic } from "../../../lib/api";
 import { ensureStudentId } from "../../../lib/student";
 
@@ -237,7 +238,9 @@ function QuestionCard({
   return (
     <section className="panel p-4 sm:p-6">
       <p className="text-xs font-semibold uppercase tracking-wide text-cyan-300">Question of record</p>
-      <p className="mt-4 text-lg font-semibold leading-7 text-white sm:text-xl sm:leading-8">{question.question_text}</p>
+      <p className="mt-4 whitespace-pre-line text-lg font-semibold leading-7 text-white sm:text-xl sm:leading-8">
+        {formatQuestionText(question.question_text)}
+      </p>
       <div className="mt-6 space-y-3">
         {question.options.map((option) => (
           <button
@@ -326,20 +329,20 @@ function BreakdownDeck({
               aria-selected={itemIndex === index}
               aria-controls={`breakdown-panel-${item.id}`}
               onClick={() => onSelect(itemIndex)}
-              className={`flex min-w-[150px] shrink-0 items-center gap-3 rounded-[8px] border px-3 py-2.5 text-left transition sm:min-w-[180px] ${
+              className={`flex min-w-[150px] shrink-0 items-center gap-3 rounded-[8px] border px-3 py-2.5 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 sm:min-w-[180px] ${
                 itemIndex === index
-                  ? "border-cyan-300/40 bg-cyan-300/10 text-white"
+                  ? "border-cyan-100 bg-cyan-300 text-[#071016] shadow-[0_0_0_2px_rgba(103,232,249,0.18),0_10px_30px_rgba(34,211,238,0.16)]"
                   : "border-white/[.08] bg-white/[.035] text-zinc-300 hover:border-white/20 hover:bg-white/[.06]"
               }`}
             >
               <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-black ${
-                itemIndex === index ? "bg-cyan-300 text-[#071016]" : "bg-white/[.08] text-zinc-400"
+                itemIndex === index ? "bg-[#071016] text-cyan-200" : "bg-white/[.08] text-zinc-400"
               }`}>
                 {item.slide_order}
               </span>
               <div className="min-w-0 flex-1">
                 <p className={`text-[10px] font-black uppercase tracking-[0.14em] ${
-                  itemIndex === index ? "text-cyan-200" : "text-zinc-500"
+                  itemIndex === index ? "text-[#12313a]" : "text-zinc-500"
                 }`}>
                   {item.slide_type}
                 </p>
@@ -366,7 +369,9 @@ function BreakdownDeck({
           </article>
         ) : (
           <div className="mt-7 max-w-3xl">
-            <h2 className="text-xl font-semibold text-white">{slide.practice_question}</h2>
+            <h2 className="whitespace-pre-line text-xl font-semibold leading-8 text-white">
+              {formatQuestionText(slide.practice_question)}
+            </h2>
             <div className="mt-5 space-y-3">
               {slide.practice_options?.map((option) => (
                 <button
