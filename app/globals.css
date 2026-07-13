@@ -152,6 +152,21 @@ select:focus,
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+.breakdown-cta-arrow {
+  display: inline-block;
+  animation: breakdown-arrow-nudge 1.35s ease-in-out infinite;
+}
+
+.breakdown-cta:hover .breakdown-cta-arrow,
+.breakdown-cta:focus-visible .breakdown-cta-arrow {
+  animation-duration: 0.7s;
+}
+
+@keyframes breakdown-arrow-nudge {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(7px); }
+}
+
 .confetti-stage {
   position: fixed;
   inset: 0;

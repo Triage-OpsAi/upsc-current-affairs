@@ -170,13 +170,13 @@ export default function PracticePage({ params }: { params: { topicId: string } }
                   {nextTopic ? (
                     <Link
                       href={`/practice/${nextTopic.id}`}
-                      className="rounded-[6px] bg-[#18181b] px-4 py-2 text-sm font-bold text-white"
+                      className="group inline-flex min-h-11 items-center gap-3 rounded-[8px] border border-emerald-200/30 bg-emerald-300 px-4 py-2 text-sm font-black text-[#07120d] transition hover:-translate-y-0.5 hover:bg-emerald-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d0f15]"
                     >
-                      Next Question
+                      Next question <span className="transition-transform group-hover:translate-x-1" aria-hidden="true">→</span>
                     </Link>
                   ) : (
-                    <Link href="/archive" className="rounded-[6px] bg-[#18181b] px-4 py-2 text-sm font-bold text-white">
-                      Open Archive
+                    <Link href="/archive" className="group inline-flex min-h-11 items-center gap-3 rounded-[8px] border border-emerald-200/30 bg-emerald-300 px-4 py-2 text-sm font-black text-[#07120d] transition hover:-translate-y-0.5 hover:bg-emerald-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d0f15]">
+                      Open archive <span className="transition-transform group-hover:translate-x-1" aria-hidden="true">→</span>
                     </Link>
                   )}
                 </div>
@@ -185,14 +185,37 @@ export default function PracticePage({ params }: { params: { topicId: string } }
 
             {stage === "answered-wrong" && (
               <ResultBanner ok={false}>
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <span>
-                    Not quite.
-                    {result?.correct_option && ` Correct answer: ${result.correct_option}. ${result.explanation ?? ""}`}
-                  </span>
+                <div className="grid items-center gap-5 lg:grid-cols-[minmax(0,1fr)_auto]">
+                  <div className="flex items-start gap-3">
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-rose-300/25 bg-rose-300/10 text-base font-black text-rose-200" aria-hidden="true">
+                      !
+                    </span>
+                    <div>
+                      <p className="text-base font-bold text-white">Not quite — use this attempt to close the gap.</p>
+                      <p className="mt-1 text-sm font-medium leading-6 text-zinc-400">
+                        {result?.correct_option
+                          ? `Correct answer: ${result.correct_option}. ${result.explanation ?? ""}`
+                          : "The guided breakdown will isolate the exact fact or concept that changed the answer."}
+                      </p>
+                    </div>
+                  </div>
                   {result?.breakdown_available && !result.correct_option && (
-                    <button disabled={actionBusy} onClick={startBreakdown} className="rounded-[6px] bg-[#18181b] px-4 py-2 text-sm font-bold text-white disabled:opacity-50">
-                      {actionBusy ? <InlineSpinner label="Preparing breakdown" /> : "Work through breakdown"}
+                    <button
+                      disabled={actionBusy}
+                      onClick={startBreakdown}
+                      className="breakdown-cta group flex min-h-[64px] w-full items-center justify-between gap-4 rounded-[10px] border border-cyan-100/70 bg-gradient-to-r from-cyan-300 to-emerald-300 px-4 py-3 text-left text-[#061016] shadow-[0_12px_35px_rgba(34,211,238,0.18)] transition hover:-translate-y-0.5 hover:shadow-[0_16px_42px_rgba(34,211,238,0.28)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d0f15] disabled:pointer-events-none disabled:opacity-55 sm:w-auto sm:min-w-[270px]"
+                    >
+                      {actionBusy ? (
+                        <InlineSpinner label="Preparing breakdown" />
+                      ) : (
+                        <>
+                          <span>
+                            <span className="block text-sm font-black">Open guided breakdown</span>
+                            <span className="mt-0.5 block text-xs font-semibold text-[#12313a]">6 focused steps · about 3 minutes</span>
+                          </span>
+                          <span className="breakdown-cta-arrow text-2xl font-black" aria-hidden="true">→</span>
+                        </>
+                      )}
                     </button>
                   )}
                 </div>
@@ -457,8 +480,10 @@ function ConfettiBurst() {
 
 function ResultBanner({ ok, children }: { ok: boolean; children: React.ReactNode }) {
   return (
-    <div className={`mt-4 rounded-[8px] border p-4 text-sm font-semibold ${
-      ok ? "border-[#b8dfc2] bg-[#f1faf3] text-[#1d6d38]" : "border-[#ffd6d1] bg-[#fff1f0] text-[#ad3d35]"
+    <div className={`mt-4 rounded-[12px] border p-4 text-sm font-semibold sm:p-5 ${
+      ok
+        ? "border-emerald-300/20 bg-emerald-300/[.07] text-emerald-100"
+        : "border-rose-300/20 bg-gradient-to-br from-rose-300/[.08] to-white/[.025] text-zinc-100"
     }`}>
       {children}
     </div>
