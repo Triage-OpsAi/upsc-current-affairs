@@ -348,6 +348,25 @@ function LoginScreen({ onAuthed }: { onAuthed: (student: StudentProfile) => void
                       placeholder="000000"
                     />
                   </label>
+                  <div
+                    role="note"
+                    className="flex gap-3 rounded-lg border border-amber-300/25 bg-amber-300/[.08] px-4 py-3 text-sm leading-6 text-amber-100"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      className="mt-0.5 size-5 shrink-0 text-amber-300"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 7.5 12 13l9-5.5M5 19h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2Z" />
+                    </svg>
+                    <p>
+                      <span className="font-semibold text-amber-50">Can&apos;t find the OTP?</span>{" "}
+                      Check your spam or junk folder. Other email communications from us may also appear there.
+                    </p>
+                  </div>
                   {accountExists === false && (
                     <div className="grid gap-3 sm:grid-cols-2">
                       <input
