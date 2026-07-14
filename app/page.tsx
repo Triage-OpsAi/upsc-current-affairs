@@ -7,6 +7,7 @@ import { MobileNav } from "./components/MobileNav";
 import { AppLoader, InlineSpinner } from "./components/AppLoader";
 import { OfferCard } from "./components/OfferCard";
 import { SiteFooter } from "./components/SiteFooter";
+import { ContentTabs } from "./components/ContentTabs";
 import { api, ApiError, DashboardStats, Topic, TopicListResponse } from "../lib/api";
 import { selectedAvatarUrl } from "../lib/avatars";
 import { formatQuestionText } from "../lib/question-text";
@@ -159,6 +160,7 @@ export default function HomePage() {
           <div className="overflow-hidden rounded-[10px] border border-white/[.08] bg-[#0d0f15] shadow-2xl shadow-black/30">
             <Topbar student={student} stats={stats} />
             <div className="space-y-4 p-4 sm:p-5 lg:p-8">
+              <ContentTabs active="current_affairs" />
               {student.device_warning && (
                 <section className="rounded-lg border border-amber-300/20 bg-amber-300/[.07] p-4 text-sm font-semibold text-amber-100">
                   {student.device_warning}

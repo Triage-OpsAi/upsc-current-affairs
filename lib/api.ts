@@ -142,6 +142,44 @@ export interface Question {
   difficulty: string;
 }
 
+export interface SubjectSummary {
+  key: string;
+  name: string;
+  visible: boolean;
+}
+
+export interface SubjectChapter {
+  id: string;
+  subject_key: string;
+  name: string;
+  chapter_order: number;
+  question_count: number;
+}
+
+export interface SubjectQuestion {
+  id: string;
+  chapter_id: string;
+  question_text: string;
+  options: { key: string; text: string }[];
+  difficulty: string;
+  format: "statement" | "assertion_reason" | "negative" | "matching" | null;
+}
+
+export interface SubjectQuestionListResponse {
+  items: SubjectQuestion[];
+  meta: { page: number; page_size: number; total_items: number; total_pages: number };
+}
+
+export interface SubjectBreakdownSlide {
+  id: string;
+  slide_order: number;
+  slide_type: "theory" | "practice";
+  concept: string;
+  content: string | null;
+  practice_question: string | null;
+  practice_options: { key: string; text: string }[] | null;
+}
+
 export interface AttemptResult {
   is_correct: boolean;
   correct_option: string | null;
@@ -229,6 +267,31 @@ export const api = {
       body: JSON.stringify({ device_id }),
     }),
   getQuestionForTopic: (topicId: string) => request<Question>(`/api/questions/topic/${topicId}`),
+  listSubjects: () => request<SubjectSummary[]>(`/api/subjects`),
+  listChapters: (subjectKey: string) =>
+    request<SubjectChapter[]>(`/api/subjects/${encodeURIComponent(subjectKey)}/chapters`),
+  listSubjectQuestions: (subjectKey: string, chapterId: string, page = 1) =>
+    request<SubjectQuestionListResponse>(
+      `/api/subjects/${encodeURIComponent(subjectKey)}/chapters/${encodeURIComponent(chapterId)}/questions?page=${page}&page_size=10`,
+    ),
+  getSubjectQuestion: (subjectKey: string, chapterId: string, questionId: string) =>
+    request<SubjectQuestion>(
+      `/api/subjects/${encodeURIComponent(subjectKey)}/chapters/${encodeURIComponent(chapterId)}/questions/${encodeURIComponent(questionId)}`,
+    ),
+  submitSubjectAttempt: (body: {
+    student_id: string;
+    question_id: string;
+    selected_option: string;
+    attempt_number?: number;
+    went_through_breakdown?: boolean;
+  }) => request<AttemptResult>(`/api/subjects/attempts`, { method: "POST", body: JSON.stringify(body) }),
+  getSubjectBreakdown: (questionId: string) =>
+    request<SubjectBreakdownSlide[]>(`/api/subjects/breakdown/${encodeURIComponent(questionId)}`),
+  submitSubjectBreakdownAnswer: (body: { student_id: string; slide_id: string; selected_option: string }) =>
+    request<{ is_correct: boolean; correct_option: string; explanation: string | null }>(`/api/subjects/breakdown-answers`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
   submitAttempt: (body: {
     student_id: string;
     question_id: string;
