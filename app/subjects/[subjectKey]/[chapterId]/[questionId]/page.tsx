@@ -241,7 +241,7 @@ function SubjectBreakdownDeck({ slides, index, studentId, onSelect, onNext }: { 
         ) : (
           <div className="mt-5 max-w-3xl">
             <p className="whitespace-pre-line text-lg font-semibold leading-7 text-white">{formatQuestionText(slide.practice_question)}</p>
-            <div className="mt-5 space-y-3">{slide.practice_options?.map((option) => <button key={option.key} disabled={!!feedback || busy} onClick={() => setChosen(option.key)} className={`w-full rounded-lg border p-4 text-left text-sm font-semibold ${chosen === option.key ? "border-cyan-200 bg-cyan-300 text-[#071016]" : "border-zinc-200 bg-white text-zinc-900"}`}><span className="mr-2 font-black">{option.key}.</span>{option.text}</button>)}</div>
+            <div className="mt-5 space-y-3">{slide.practice_options?.map((option) => <button key={option.key} disabled={!!feedback || busy} onClick={() => setChosen(option.key)} className={`w-full rounded-lg border p-4 text-left text-sm font-semibold transition ${chosen === option.key ? "border-cyan-200 bg-cyan-300 text-[#071016]" : "border-white/[.12] bg-white/[.04] text-zinc-100 hover:border-cyan-300/60 hover:bg-white/[.07]"}`}><span className="mr-2 font-black">{option.key}.</span>{option.text}</button>)}</div>
             {!feedback && <button disabled={!chosen || busy} onClick={() => void check()} className="primary-button mt-5 disabled:opacity-40">{busy ? <InlineSpinner label="Checking answer" /> : "Check answer"}</button>}
             {error && <p className="mt-4 text-sm font-semibold text-rose-200">{error}</p>}
             {feedback && <ResultBanner ok={feedback.is_correct}>{feedback.is_correct ? "Correct." : `Correct answer: ${feedback.correct_option}.`} {feedback.explanation}</ResultBanner>}
