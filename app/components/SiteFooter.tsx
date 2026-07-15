@@ -15,7 +15,8 @@ export function SiteFooter({ compact = false }: { compact?: boolean }) {
         </div>
         <div className="sm:text-right">
           <nav aria-label="Legal" className="flex flex-wrap gap-x-5 gap-y-2 text-xs font-bold sm:justify-end">
-            <Link href="/terms" className="hover:text-white">Terms &amp; Conditions</Link>
+            <Link href="/privacy" className="hover:text-white">Privacy Policy</Link>
+            <Link href="/terms" className="hover:text-white">Terms of Service</Link>
             <Link href="/refund-policy" className="hover:text-white">Refund Policy</Link>
           </nav>
           <p className="mt-3 text-[11px]">© {new Date().getFullYear()} {legalConfig.businessName}. All rights reserved.</p>

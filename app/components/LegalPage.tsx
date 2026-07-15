@@ -19,6 +19,7 @@ export function LegalPage({
         <nav className="flex flex-wrap items-center justify-between gap-3 text-sm">
           <Link href="/" className="font-black text-cyan-200 hover:text-cyan-100">← AspirantOS</Link>
           <div className="flex gap-4 text-zinc-400">
+            <Link href="/privacy" className="hover:text-white">Privacy</Link>
             <Link href="/terms" className="hover:text-white">Terms</Link>
             <Link href="/refund-policy" className="hover:text-white">Refund policy</Link>
           </div>
@@ -28,7 +29,7 @@ export function LegalPage({
           <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">{eyebrow}</p>
           <h1 className="mt-4 text-3xl font-semibold text-white sm:text-5xl">{title}</h1>
           <p className="mt-4 max-w-3xl text-sm leading-7 text-zinc-400">{summary}</p>
-          <p className="mt-5 text-xs font-bold text-zinc-500">Effective: {legalConfig.effectiveDate}</p>
+          <p className="mt-5 text-xs font-bold text-zinc-500">Last updated: {legalConfig.lastUpdated}</p>
         </header>
 
         {!legalContactConfigured && (
